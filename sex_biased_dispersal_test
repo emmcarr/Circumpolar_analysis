@@ -5,13 +5,11 @@
 
 library(hierfstat)
 
-## import data that is in FSTAT format
+## import microsatellite genotype data that is in FSTAT format
 SRWgen.dat<-read.fstat("/Users/emac/Documents/Global Microsat Project/April 2016 Analysis files/SBDT/FSTAT_2OB_SRWNov17.dat")
 
 ## import sex ID data from separate file; structure is one column with sample name and then on column with sex ID
 sex.dat<-read.csv(file = "/Users/emac/Documents/Global Microsat Project/April 2016 Analysis files/SBDT/SRWsex.txt", header = TRUE)
-## 55 males and 74 females in Indo-Pacific sample
-## 15 males and 78 females in South Atlantic sample
 
 ## tested for sex-biased dispersal; main test was two sided
 SRW.mAIc<-sexbias.test(SRWgen.dat,sex.dat[,2],nperm=1000,test="mAIc",alternative="two.sided")

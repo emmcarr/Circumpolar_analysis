@@ -10,8 +10,7 @@
 #$ -q all.q
 #$ -pe multi 3 # the script itself will command 3 processors in parallel, this can be referred to as NSLOTS in the commandline invocation
 
-# Get the latest version of structure, first make sure the old one is unloaded.
-# module unload structure
+# Get the latest version of structure
  module load structure/2.3.4b
 
 # make sure the following is only done once, in the case of $SGE_TASK_ID=1

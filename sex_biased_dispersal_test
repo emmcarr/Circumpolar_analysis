@@ -1,0 +1,27 @@
+## This is R code for testing for sex-biased dispersal using hierfstat
+## Jerome Goudet and Thibaut Jombart (2015). hierfstat: Estimation and Tests of
+## Hierarchical F-Statistics. R package version 0.04-22.
+## https://CRAN.R-project.org/package=hierfstat
+
+library(hierfstat)
+
+## import data that is in FSTAT format
+SRWgen.dat<-read.fstat("/Users/emac/Documents/Global Microsat Project/April 2016 Analysis files/SBDT/FSTAT_2OB_SRWNov17.dat")
+
+## import sex ID data from separate file; structure is one column with sample name and then on column with sex ID
+sex.dat<-read.csv(file = "/Users/emac/Documents/Global Microsat Project/April 2016 Analysis files/SBDT/SRWsex.txt", header = TRUE)
+## 55 males and 74 females in Indo-Pacific sample
+## 15 males and 78 females in South Atlantic sample
+
+## tested for sex-biased dispersal; main test was two sided
+SRW.mAIc<-sexbias.test(SRWgen.dat,sex.dat[,2],nperm=1000,test="mAIc",alternative="two.sided")
+## two sided p-value = 0.299; not significant for greater (0.856) or less (0.154) either
+
+SRW.vAIc<-sexbias.test(SRWgen.dat,sex.dat[,2],nperm=1000,test="vAIc",alternative="two.sided")
+## two sided p-value = 0.179; not significant for greater (0.186) or less either (0.812)
+
+SRW.FIS<-sexbias.test(SRWgen.dat,sex.dat[,2],nperm=1000,test="FIS",alternative="two.sided")
+## two sided p-value = 0.927, not significant for greater (0.785) or less (0.203)
+
+SRW.FST<-sexbias.test(SRWgen.dat,sex.dat[,2],nperm=1000,test="FST",alternative="two.sided")
+## two sided p-value = 0.967, not significant for greater (0.508) or less (0.485)

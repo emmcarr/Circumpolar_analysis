@@ -1,4 +1,7 @@
-## script for running fastsimcoal simulations and then analysing the simulation results in arlsum stat
+## script for running fastsimcoal simulations and then analysing the simulation results in arlsumstat
+## requires fastsimcoal ./fsc25 to generate coalescent simulations and output arlequin files
+## requires arlsumstatmac_64bit and arl_run.ars and summary statistics definition file to calculate summary statistics
+## produces file of model parameters (.params) and summary statistics (outss.txt)
 
 ## coalescent simulations using fastsimcoal (fsc25)
 ./fsc25 -t Scen1.tpl -n1 -e Scen2.est -E100000 -g

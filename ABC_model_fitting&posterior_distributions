@@ -145,14 +145,12 @@ res.s1.abc=abc(target, Scen1.params, sumstatScen1, method='neuralnet', transf='l
 s1.res<-summary(res.s1.abc)
 write.csv(res.s1.abc$adj.values, file="S1.adjusted.value.csv")
 write.csv(res.s1.abc$weights, file="S1.weights.csv")
-write.csv(s1.res, file="Scen1_posteriorvalues.csv")
 
 # Neural net method for scenario 2
 res.s2.abc=abc(target, Scen2.params, sumstatScen2, method='neuralnet', transf='log', tol=.05)
 s2.res<-summary(res.s2.abc)
 write.csv(res.s2.abc$adj.values, file="S2.adjusted.value.csv")
 write.csv(res.s2.abc$weights, file="S2.weights.csv")
-write.csv(s2.res, file="Scen2_posteriorvalues.csv")
 
 # Neural net method for scenario 3
 res.s3.abc=abc(target, Scen3.params, sumstatScen3, method='neuralnet', transf='log', tol=.01)
@@ -160,7 +158,6 @@ s3.res<-summary(res.s3.abc)
 write.csv(s3.res, file="Scenario3_PosteriorStats_NeuralNet_tol01.csv")
 write.csv(res.s3.abc$adj.values, file="S3.adjusted.value.csv")
 write.csv(res.s3.abc$weights, file="S3.weights.csv")
-write.csv(s3.res, file="Scen3_posteriorvalues.csv")
 
 # Neural net method for scenario 4
 res.s4.abc=abc(target, Scen4.params, sumstatScen4, method='neuralnet', transf='log', tol=.01)
@@ -212,4 +209,82 @@ dev.off()
 # Posterior distribution of the parameters Scen 6
 pdf(paste('graph', 'Scenario6_posterior_dist_neuralnet_method_tol01.pdf'))
 plot(res.s6.abc, param=Scen6.params, subsample=1000)
+dev.off()
+
+  #########################################################################################################
+                    ####### Posterior predictive checks for Scenarios 4, 5, and 6 ###########
+    #########################################################################################################
+## Need to run simcoal for the estimated parameters, so need to extract the parameters from the accepted simulations
+setwd("directory_of_choice")
+
+res.s4.abc<-read.csv(file="S4.adjusted.value.csv")
+res.s4.abc<-res.s4.abc[,-1] ## removing column that is number of simulation 
+res.s4.abc[,3:9]<-round(res.s4.abc[,3:9]) ## rounding parameters that should be whole numbers (e.g., Ne values)
+write.table(write.table(res.s4.abc, row.names = FALSE, file="Scenario4NeuralNetPostParamsUW.def"), row.names = FALSE)
+
+res.s5.abc<-read.csv(file="/Scen5/S5.adjusted.value.csv")
+res.s5.abc<-res.s5.abc[,-1]
+res.s5.abc[,3:10]<-round(res.s5.abc[,3:10])
+write.table(write.table(res.s5.abc, row.names = FALSE, file="Scen5/Scenario5NeuralNetPostParamsUW.def"), row.names = FALSE)
+
+res.s6.abc<-read.csv(file="Scen6/S6.adjusted.value.csv")
+res.s6.abc<-res.s6.abc[,-1]
+res.s6.abc[,5:12]<-round(res.s6.abc[,5:12])
+write.table(write.table(res.s6.abc, row.names = FALSE, file="Scen6/Scenario6NeuralNetPostParamsUW.def"), row.names = FALSE)
+
+## bash - run fastsim coal with posterior distribution sample but with .est file defining
+## complex parameters and .def with parameters taken from accepted simulations
+## ./fsc25 -n1 -E10 -t Scen4HistWhalingMRMsats.tpl -e Scen4HistWhalingMRMsats.est -F Scenario4NeuralNetPostParamsUW.def -g
+## summary statistics calculated using arlsumstat (see bash script on github)
+
+S4.ppc<-read.table(file="Scen4/Scen4PPCoutss.txt", header=TRUE)
+sumstat.S4.PPC.used<-S4.ppc[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                               'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+sumstat.S4.PPC.novel<-S4.ppc[,c('Ksd_1' , 'Ksd_2' , 'mean_K' , 'sd_K', 
+                                'Hsd_1' , 'Hsd_2' , 'mean_H' , 'FIS' , 'FIT')]
+                                
+## divide summary statistics into those used for model fitting (target.used) and those not previously analysed
+## and used here for posterior predictive check (targe.novel)
+target.used<-target[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                      'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+
+target.novel<-target[,c('Ksd_1' , 'Ksd_2' , 'mean_K' , 'sd_K', 
+                        'Hsd_1' , 'Hsd_2' , 'mean_H' , 'FIS' , 'FIT')]
+
+S5.ppc<-read.table(file="Scen5/Scen5PPC.outss.txt", header=TRUE)
+sumstat.S5.PPC.used<-S5.ppc[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                               'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+sumstat.S5.PPC.novel<-S5.ppc[,c('Ksd_1' , 'Ksd_2' , 'mean_K' , 'sd_K', 
+                                'Hsd_1' , 'Hsd_2' , 'mean_H' , 'FIS' , 'FIT')]
+
+S6.ppc<-read.table(file="Scen6/Scen6PPCoutss.txt", header=TRUE)
+sumstat.S6.PPC.used<-S6.ppc[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                               'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+sumstat.S6.PPC.novel<-S6.ppc[,c('Ksd_1' , 'Ksd_2' , 'mean_K' , 'sd_K', 
+                                'Hsd_1' , 'Hsd_2' , 'mean_H' , 'FIS' , 'FIT')]
+
+## plot distribution of novel summary statistics from accepted simulations with real value as red line
+## save output as pdf
+
+pdf("S4.Postpredictive_check_novel.pdf")
+par(mfrow=c(2,4))
+for (i in 1:(ncol(sumstat.S4.PPC.novel))){
+  hist(sumstat.S4.PPC.novel[,i], xlab=colnames(sumstat.S4.PPC.novel)[i], xlim=c((min(target.novel[i], min(sumstat.S4.PPC.novel[,i]))), (max(target.novel[i], max(sumstat.S4.PPC.novel[,i])))), main="")
+  abline(v = target.novel[i], col="red")}
+dev.off()
+
+## Scenario 5
+pdf("S5.Postpredictive_check_novel.pdf")
+par(mfrow=c(2,4))
+for (i in 1:(ncol(sumstat.S5.PPC.novel))){
+  hist(sumstat.S5.PPC.novel[,i], xlab=colnames(sumstat.S5.PPC.novel)[i], xlim=c((min(target.novel[i], min(sumstat.S5.PPC.novel[,i]))), (max(target.novel[i], max(sumstat.S5.PPC.novel[,i])))), main="")
+  abline(v = target.novel[i], col="red")}
+dev.off()
+
+## Scenario 6
+pdf("S6.Postpredictive_check_novel.pdf")
+par(mfrow=c(2,4))
+for (i in 1:(ncol(sumstat.S6.PPC.novel))){
+  hist(sumstat.S6.PPC.novel[,i], xlab=colnames(sumstat.S6.PPC.novel)[i], xlim=c((min(target.novel[i], min(sumstat.S6.PPC.novel[,i]))), (max(target.novel[i], max(sumstat.S6.PPC.novel[,i])))), main="")
+  abline(v = target.novel[i], col="red")}
 dev.off()

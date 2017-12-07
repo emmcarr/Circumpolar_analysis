@@ -1,0 +1,215 @@
+## R script for ABC analysis for Carroll et al (in revision)
+## ABC analysis done use abc package
+
+
+## loading R and libraries on cluster
+module load R/3.4.1
+R
+library(abc)
+library(MCMCglmm)
+library(car)
+library(ggplot2)
+
+setwd("dir_of_your_choice")
+#########################################################################################################
+####### Start by importing simulation data previously generated using fastsimcoal and arlequin ###########
+#########################################################################################################
+## Importing scenario 1: constant migration rate over time
+Scen1.out<-as.matrix(read.delim(file="100KScen1popDivMigrationWhalingMsatsoutss.txt", sep = "\t", header=TRUE))
+Scen1.params<-as.matrix(read.delim(file="100KScen1popDivMigrationWhalingMsats.params", sep = "\t", header=TRUE))
+
+## Importing scenario 2: constant migration rate over time; another MR after whaling
+Scen2.out<-as.matrix(read.delim(file="100KScen2outss.txt", sep = "\t", header=TRUE))
+Scen2.params<-as.matrix(read.delim(file="100KScen2ContGF2MR.params", sep = "\t", header=TRUE))
+
+## Importing scenario 3: No gene flow after divergence
+Scen3.out<-as.matrix(read.delim(file="100KScen3NGFWhalingMsatsoutss.txt", sep = "\t", header=TRUE))
+Scen3.params<-as.matrix(read.delim(file="100KScen3NGFWhalingMsats.params", sep = "\t", header=TRUE))
+
+## Importing scenario 4: only post whaling migration after divergence
+Scen4.out<-as.matrix(read.delim(file="100KScen4HistWhalingMRMsats_outss.txt", sep = "\t", header=TRUE))
+Scen4.params<-as.matrix(read.delim(file="100KScen4HistWhalingMRMsats.params", sep = "\t", header=TRUE))
+
+## Importing scenario 5: Isolation and secondary contact with one post contact migration rate
+Scen5.out<-as.matrix(read.delim(file="Scen5lowerNeB2Coutss.txt", sep = "\t", header=TRUE))
+Scen5.params<-as.matrix(read.delim(file="Scen5lowerNeB2C.params", sep = "\t", header=TRUE))
+
+## Importing scenario 6: Isolation and secondary contact, with one post contact 
+## and one post whaling migration rate
+Scen6.out<-as.matrix(read.delim(file="Scen6B2Coutss.txt", sep = "\t", header=TRUE))
+Scen6.params<-as.matrix(read.delim(file="Scen6B2C.params", sep = "\t", header=TRUE))
+
+    #########################################################################################################
+####### Defining summary statistics from actual data and extract summary statistics for model fitting ###########
+    #########################################################################################################
+
+## defining actual data and summary statistics
+target<-matrix(nrow=1, ncol=32, c(9.58824,9.82353,3.37377,4.59939,9.70588,0.166378,11.1765,0.775234,0.76437,0.0951308,0.117777,
+                                  0.769802,0.00768214,0.774675,0.412155262,0.398922568,0.132718982,0.126791019,0.405538915,
+                                  0.009356928,0.425559475,25.82352941,25.23529412,16.07107376,14.56678333,25.52941176,0.415945165,
+                                  27.70588235,0.0410882,0.0121871,0.0527745,0.012729))
+
+colnames(target)<-c('K_1' , 'K_2' , 'Ksd_1' , 'Ksd_2' , 'mean_K' , 'sd_K' , 'tot_K' , 
+                    'H_1' , 'H_2' , 'Hsd_1' , 'Hsd_2' , 'mean_H' , 'sd_H' , 'tot_H' , 
+                    'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW' , 'R_1' , 'R_2' , 
+                    'Rsd_1' , 'Rsd_2' , 'mean_R' , 'sd_R' , 'tot_R' , 'FIS' , 'FST' , 'FIT' , 'FST_2_1')
+
+## Get these sumstats for each scenario
+# Summary statistics for microsatellites, following Beaumont (2008), with some tweaking:
+#1. Heterozygosity in each population : H_1 ; H_2
+#2. Sample variance of allele length in each population; Rsd_1 ; Rsd_2
+#3. number of alleles in each population; K_1 and K_2
+#4. heterozygosity for each pair of populations pooled together; tot_H
+#5. variance for each pair of populations pooled together; sd_H
+#6. number of alleles for each pair of populations pooled; tot_K
+# also added FST; FST_2_1 and garza william stats
+
+sumstatScen1=Scen1.out[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                          'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+
+sumstatScen2=Scen2.out[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                          'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+
+sumstatScen3 <-Scen3.out[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                            'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+
+sumstatScen4 <-Scen4.out[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                            'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+
+sumstatScen5 = Scen5.out[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                            'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+
+sumstatScen6 = Scen6.out[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                            'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]
+
+
+## put real data in similar format
+target<-as.matrix(t(target[,c('K_1', 'K_2', "Rsd_1", "Rsd_2", 'tot_K', 'H_1', 'H_2', 'tot_H', "sd_H", 'FST_2_1',
+                              'GW_1' , 'GW_2' , 'GWsd_1' , 'GWsd_2' , 'mean_GW' , 'sd_GW' , 'tot_GW')]))
+
+   #########################################################################################################
+                    ####### Estimate posterior probabilities for scenarios 1 to 6 ###########
+                    ####### Also cross validation for model selection with ABC ###########
+    #########################################################################################################
+
+## create index
+rep1=dim(sumstatScen1)[1]
+rep2=dim(sumstatScen2)[1]
+rep3=dim(sumstatScen3)[1]
+rep4=dim(sumstatScen4)[1]
+rep5=dim(sumstatScen5)[1]
+rep6=dim(sumstatScen6)[1]
+
+index1=c(rep('Scen1', rep4),rep("Scen2", rep5), rep("Scen3", rep6),
+         rep('Scen4', rep4),rep("Scen5", rep5), rep("Scen6", rep6)) 
+
+res.postprLP=postpr(target, index1, rbind(sumstatScen1,sumstatScen2,sumstatScen3, sumstatScen4,
+                                         sumstatScen5,sumstatScen6), tol=.01, method='neuralnet')
+                                         
+## There are 6 models but only 3 for which simulations have been accepted.
+## No regression is performed, method is set to rejection.
+## Consider increasing the tolerance rate.TRUE 
+
+summary(res.postprLP)
+
+#Proportion of accepted simulations (rejection):
+#  Scen1  Scen2  Scen3  Scen4  Scen5  Scen6 
+#0.0000 0.0000 0.0000 0.3597 0.2812 0.3592 
+
+## Rerun analysis with three models that have accepted simulations
+indexB3=c(rep('Scen4', rep4),rep("Scen5", rep5), rep("Scen6", rep6)) 
+
+res.postpr2=postpr(target, indexB3, rbind(sumstatScen4,sumstatScen5, sumstatScen6), 
+                   tol=.01, method='neuralnet')
+                   
+## Bayes Factor supports scenarios 5 and 6 as the best fits for the data. 
+
+## Next step is to cross-validation test to ensure summary statistics can 
+## differentiate the different scenarios
+## use the cv4postpr function in the abc package
+
+cvbest3=cv4postpr(indexB3, rbind(sumstatScen4,sumstatScen5,sumstatScen6),
+                  nval=1000, tols=c(.01,.05), method='neuralnet')
+                  
+## the results showed that scenario 4 was correctly assigned most of the time
+## scenario 5 and 6 were often incorrectly assigned as each other
+
+  #########################################################################################################
+                    ####### Estimate posterior distributions for each scenarios ###########
+                     ####### This was done using the neural net algorithm and tolerance of 1% ###########
+             ####### Also plot posterior distributions using plot function from abc package ###########
+    #########################################################################################################
+    
+    # Neural net method for scenario 1
+res.s1.abc=abc(target, Scen1.params, sumstatScen1, method='neuralnet', transf='log', tol=.01)
+s1.res<-summary(res.s1.abc)
+write.csv(res.s1.abc$adj.values, file="S1.adjusted.value.csv")
+write.csv(res.s1.abc$weights, file="S1.weights.csv")
+write.csv(s1.res, file="Scen1_posteriorvalues.csv")
+
+# Neural net method for scenario 2
+res.s2.abc=abc(target, Scen2.params, sumstatScen2, method='neuralnet', transf='log', tol=.05)
+s2.res<-summary(res.s2.abc)
+write.csv(res.s2.abc$adj.values, file="S2.adjusted.value.csv")
+write.csv(res.s2.abc$weights, file="S2.weights.csv")
+write.csv(s2.res, file="Scen2_posteriorvalues.csv")
+
+# Neural net method for scenario 3
+res.s3.abc=abc(target, Scen3.params, sumstatScen3, method='neuralnet', transf='log', tol=.01)
+s3.res<-summary(res.s3.abc)
+write.csv(s3.res, file="Scenario3_PosteriorStats_NeuralNet_tol01.csv")
+write.csv(res.s3.abc$adj.values, file="S3.adjusted.value.csv")
+write.csv(res.s3.abc$weights, file="S3.weights.csv")
+write.csv(s3.res, file="Scen3_posteriorvalues.csv")
+
+# Neural net method for scenario 4
+res.s4.abc=abc(target, Scen4.params, sumstatScen4, method='neuralnet', transf='log', tol=.01)
+s4.res<-summary(res.s4.abc)
+write.csv(s4.res, file="Scenario4_PosteriorStats_NeuralNet_tol01.csv")
+write.csv(res.s4.abc$adj.values, file="S4.adjusted.value.csv")
+write.csv(res.s4.abc$weights, file="S4.weights.csv")
+write.csv(s4.res, file="Scen4_posteriorvalues.csv")
+
+# Neural net method for scenario 5
+res.s5.abc=abc(target, Scen5.params, sumstatScen5, method='neuralnet', transf='log', tol=.01)
+s5.res<-summary(res.s5.abc)
+write.csv(s5.res, file="Scenario5_PosteriorStats_NeuralNet_tol01.csv")
+write.csv(res.s5.abc$adj.values, file="S5.adjusted.value.csv")
+write.csv(res.s5.abc$weights, file="S5.weights.csv")
+
+# Neural net method for scenario 6
+res.s6.abc=abc(target, Scen6.params, sumstatScen6, method='neuralnet', transf='log', tol=.01)
+s6.res<-summary(res.s6.abc)
+write.csv(s6.res, file="Scenario6_PosteriorStats_NeuralNet_tol01.csv")
+write.csv(res.s6.abc$adj.values, file="S6.adjusted.value.csv")
+write.csv(res.s6.abc$weights, file="S6.weights.csv")
+
+# Posterior distribution of the parameters Scen 1
+pdf(paste('graph', 'Scenario1_posterior_dist_neuralnet_ridge_method_tol01.pdf'))
+plot(res.s1.abc, param=Scen1.params, subsample=1000)
+dev.off()
+
+# Posterior distribution of the parameters Scen 2
+pdf(paste('graph', 'Scenario2_posterior_dist_neuralnet_method_tol01.pdf'))
+plot(res.s2.abc, param=Scen2.params, subsample=1000)
+dev.off()
+
+# Posterior distribution of the parameters Scen 3
+pdf(paste('graph', 'Scenario3_posterior_dist_neuralnet_method_tol01.pdf'))
+plot(res.s3.abc, param=Scen3.params, subsample=1000)
+dev.off()
+
+# Posterior distribution of the parameters Scen 4
+pdf(paste('graph', 'Scenario4_posterior_dist_neuralnet_method_tol01.pdf'))
+plot(res.s4.abc, param=Scen4.params, subsample=1000)
+dev.off()
+
+# Posterior distribution of the parameters Scen 5
+pdf(paste('graph', 'Scenario5_posterior_dist_neuralnet_method_tol01.pdf'))
+plot(res.s5.abc, param=Scen5.params, subsample=1000)
+dev.off()
+
+# Posterior distribution of the parameters Scen 6
+pdf(paste('graph', 'Scenario6_posterior_dist_neuralnet_method_tol01.pdf'))
+plot(res.s6.abc, param=Scen6.params, subsample=1000)
+dev.off()

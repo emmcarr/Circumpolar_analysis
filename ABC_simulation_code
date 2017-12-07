@@ -1,0 +1,59 @@
+## script for running fastsimcoal simulations and then analysing the simulation results in arlsum stat
+
+## coalescent simulations using fastsimcoal (fsc25)
+./fsc25 -t Scen1.tpl -n1 -e Scen2.est -E100000 -g
+
+ # Go to the file with the simulated data
+   cd Scen1
+   
+ # Copy the needed files to use arlequin (assuming they were in parent directory)
+
+   cp ../arlsumstatmac_64bit .
+   cp ../arl_run.ars .
+   cp ../ssdefs.txt .
+  
+  # For each simulated data file = each simulation
+   counter=1
+   for file in *.arp 
+   do
+
+      # Number of the simulation (the loop use the alphabetic order, not the numeric order)
+      var=`grep ' 0 pol' $file`
+      # For the first .arp file : creating outss.txt
+      if [ $counter -eq 1 ]; then
+         # If there is variability in the data, compute summary statistics using arlequin
+         if test -z "$var"; then
+            ./arlsumstatmac_64bit $file outss.txt 0 1 run_silent
+         # Number of ss
+         numSs=`sed -n 1p outss.txt | awk '{ print NF}'`
+         else
+            echo -e 'NA\t' > outss.txt
+         fi
+
+      # Other .arp files : adding ss at the end of outss.txt
+      else
+         if test -z "$var"; then
+            ./arlsumstatmac_64bit $file outss.txt 1 0 run_silent
+         else
+            printf 'NA\t%.0s' $(seq 1 $numSs) >> outss.txt
+         fi
+      fi
+
+      let counter=counter+1
+
+      # In the last column : number of the simulation, from the title of the .arp file
+      ordre=`echo $file | cut -d'_' -f2`
+      sed "$ s/$/$ordre/" outss.txt > outss1.txt
+      mv outss1.txt outss.txt 
+   done
+
+   # Use the last column to have the same order as in the .params file
+   let numCol=numSs+1
+   sort -n -k$numCol outss.txt > outss1.txt
+   mv outss1.txt outss.txt
+
+   # Name of column with count
+   #count=$(echo -e "\tcount")
+   count=$(echo -e "count")
+   sed "1 s/$/$count/" outss.txt > outss1.txt
+   mv outss1.txt outss.txt 

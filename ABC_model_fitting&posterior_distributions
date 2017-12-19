@@ -112,9 +112,6 @@ res.postprLP=postpr(target, index1, rbind(sumstatScen1,sumstatScen2,sumstatScen3
 
 summary(res.postprLP)
 
-#Proportion of accepted simulations (rejection):
-#  Scen1  Scen2  Scen3  Scen4  Scen5  Scen6 
-#0.0000 0.0000 0.0000 0.3597 0.2812 0.3592 
 
 ## Rerun analysis with three models that have accepted simulations
 indexB3=c(rep('Scen4', rep4),rep("Scen5", rep5), rep("Scen6", rep6)) 

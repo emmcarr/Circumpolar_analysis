@@ -4,7 +4,7 @@
 #$ -S /bin/bash 
 #$ -V
 #$ -N STR_SRW ## job name
-#$ -t 1-5 # this will launch two parallel instances of this script. In ne the variable $SGE_TASK_ID=1, in the other $SGE_TASK_ID will be 2
+#$ -t 1-5 # this will launch parallel instances of this script. In ne the variable $SGE_TASK_ID=1, in the other $SGE_TASK_ID will be 2
 #$ -o ./STRUCTURE/Results
 
 #$ -q all.q
